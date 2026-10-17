@@ -95,7 +95,7 @@ This repository contains the complete, production-ready **RTL-to-GDSII Physical 
 
 ### Run Full Flow in 1 Command
 ```bash
-git clone https://github.com/<your-username>/riscv-picorv32-sky130-asic-flow.git
+git clone https://github.com/vn-ntd/riscv-picorv32-sky130-asic-flow.git
 cd riscv-picorv32-sky130-asic-flow
 
 # Launch OpenLane Docker container and run flow
