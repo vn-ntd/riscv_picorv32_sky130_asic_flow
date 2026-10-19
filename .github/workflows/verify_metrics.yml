@@ -1,4 +1,4 @@
-﻿name: Physical Signoff & Functional CI Verification
+name: Physical Signoff & Functional CI Verification
 
 on:
   push:

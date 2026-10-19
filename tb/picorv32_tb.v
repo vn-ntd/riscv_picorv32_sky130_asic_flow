@@ -1,4 +1,4 @@
-﻿`timescale 1 ns / 1 ps
+`timescale 1 ns / 1 ps
 
 module picorv32_tb;
 
@@ -60,14 +60,19 @@ module picorv32_tb;
                 mem_ready <= 1;
                 // Read
                 if (mem_wstrb == 4'b0000) begin
-                    mem_rdata <= memory[mem_addr >> 2];
+                    if ((mem_addr >> 2) < 16384)
+                        mem_rdata <= memory[mem_addr >> 2];
+                    else
+                        mem_rdata <= 32'h00000013; // default nop
                 end
                 // Write
                 else begin
-                    if (mem_wstrb[0]) memory[mem_addr >> 2][ 7: 0] <= mem_wdata[ 7: 0];
-                    if (mem_wstrb[1]) memory[mem_addr >> 2][15: 8] <= mem_wdata[15: 8];
-                    if (mem_wstrb[2]) memory[mem_addr >> 2][23:16] <= mem_wdata[23:16];
-                    if (mem_wstrb[3]) memory[mem_addr >> 2][31:24] <= mem_wdata[31:24];
+                    if ((mem_addr >> 2) < 16384) begin
+                        if (mem_wstrb[0]) memory[mem_addr >> 2][ 7: 0] <= mem_wdata[ 7: 0];
+                        if (mem_wstrb[1]) memory[mem_addr >> 2][15: 8] <= mem_wdata[15: 8];
+                        if (mem_wstrb[2]) memory[mem_addr >> 2][23:16] <= mem_wdata[23:16];
+                        if (mem_wstrb[3]) memory[mem_addr >> 2][31:24] <= mem_wdata[31:24];
+                    end
 
                     // Check Status Register at 0x1000_0000
                     if (mem_addr == 32'h1000_0000) begin
@@ -150,8 +155,7 @@ module picorv32_tb;
 
         // Reset Sequence
         resetn = 0;
-        #50;
-        @(posedge clk);
+        repeat (20) @(posedge clk);
         resetn = 1;
         $display("Reset released. Executing RV32I verification sequence...");
 

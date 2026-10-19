@@ -1,4 +1,4 @@
-﻿# Python script to export high-resolution layout images using KLayout
+# Python script to export high-resolution layout images using KLayout
 # Run inside Ubuntu: klayout -z -r scripts/export_layout_image.py
 
 import os

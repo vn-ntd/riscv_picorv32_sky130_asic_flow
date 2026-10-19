@@ -1,4 +1,4 @@
-﻿# Full-Flow ASIC Implementation of 32-bit RISC-V Core (SkyWater 130nm)
+# Full-Flow ASIC Implementation of 32-bit RISC-V Core (SkyWater 130nm)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0%20%2F%20ISC-blue.svg)](LICENSE)
 [![PDK](https://img.shields.io/badge/PDK-SkyWater%20130nm-orange.svg)](https://github.com/google/skywater-pdk)

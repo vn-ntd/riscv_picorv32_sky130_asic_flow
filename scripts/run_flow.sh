@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 # Portable OpenLane execution wrapper for RISC-V PicoRV32 Implementation
