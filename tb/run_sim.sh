@@ -30,7 +30,7 @@ if command -v iverilog &> /dev/null; then
         fi
         
         iverilog -o "${SCRIPT_DIR}/simv" \
-            -DFUNCTIONAL -DGLS -DUNIT_DELAY=#1 \
+            -DFUNCTIONAL -DUSE_POWER_PINS -DGLS -DUNIT_DELAY=#1 \
             -s picorv32_tb \
             "$PRIMITIVES_VERILOG" \
             "$STD_CELL_VERILOG" \
@@ -55,6 +55,6 @@ else
             -v "${REPO_ROOT}:/work" \
             -w /work/tb \
             "$DOCKER_IMAGE" \
-            sh -c "iverilog -o /tmp/simv -DFUNCTIONAL -DGLS -DUNIT_DELAY=#1 -s picorv32_tb /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /work/results/picorv32.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
+            sh -c "iverilog -o /tmp/simv -DFUNCTIONAL -DUSE_POWER_PINS -DGLS -DUNIT_DELAY=#1 -s picorv32_tb /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /work/results/picorv32.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
     fi
 fi
