@@ -1,4 +1,4 @@
-﻿name: Physical Signoff Verification
+﻿name: Physical Signoff & Functional CI Verification
 
 on:
   push:
@@ -8,7 +8,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify-signoff:
+  functional-verification:
+    name: Run RTL Testbench Simulation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Icarus Verilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+
+      - name: Compile and Run Verilog Simulation
+        run: |
+          echo "Compiling RTL and Testbench with iverilog..."
+          iverilog -o simv -s picorv32_tb src/picorv32a.v tb/picorv32_tb.v
+          echo "Executing simulation binary..."
+          vvp simv | tee sim.log
+          grep -q "\[SIMULATION SUCCESS\]" sim.log || { echo "Simulation failed to complete successfully!"; exit 1; }
+
+  signoff-validation:
+    name: Validate Physical Signoff Reports
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,44 +38,42 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Validate Physical Signoff Metrics
+      - name: Parse and Assert Signoff Metrics
         run: |
           python3 - << 'EOF'
           import csv
           import sys
 
           metrics_file = "reports/metrics.csv"
-          print(f"Reading {metrics_file}...")
-          
           with open(metrics_file, 'r') as f:
-              reader = csv.DictReader(f)
-              rows = list(reader)
+              rows = list(csv.DictReader(f))
               if not rows:
                   print("Error: metrics.csv is empty!")
                   sys.exit(1)
               data = rows[0]
 
           checks = [
-              ("Magic DRC Violations", float(data.get("Magic_violations", -1)), 0.0, "=="),
-              ("Detailed Routing DRC", float(data.get("tritonRoute_violations", -1)), 0.0, "=="),
-              ("LVS Total Errors", float(data.get("lvs_total_errors", -1)), 0.0, "=="),
+              ("Magic DRC Signoff Violations", float(data.get("Magic_violations", -1)), 0.0, "=="),
+              ("Detailed Routing DRC Violations", float(data.get("tritonRoute_violations", -1)), 0.0, "=="),
+              ("LVS Total Discrepancies", float(data.get("lvs_total_errors", -1)), 0.0, "=="),
               ("Worst Negative Slack (WNS)", float(data.get("wns", -1)), 0.0, "=="),
               ("Total Negative Slack (TNS)", float(data.get("tns", -1)), 0.0, "=="),
               ("Core Utilization (%)", float(data.get("OpenDP_Util", 0)), 65.0, ">="),
           ]
 
           failed = False
-          print("\n=== SIGN-OFF QUALITY ASSURANCE REPORT ===")
+          print("\n=== PHYSICAL SIGNOFF METRIC VERIFICATION ===")
           for name, value, target, op in checks:
               passed = (value == target) if op == "==" else (value >= target)
               status = "✅ PASS" if passed else "❌ FAIL"
-              print(f"[{status}] {name}: Value = {value} (Required: {op} {target})")
+              print(f"[{status}] {name}: {value} (Required: {op} {target})")
               if not passed:
                   failed = True
 
+          print(f"\n[INFO] Antenna Net Violations: {data.get('net_antenna_violations', 'N/A')} (Post-detailed routing status)")
+          print(f"[INFO] Antenna Pin Violations: {data.get('pin_antenna_violations', 'N/A')}")
+
           if failed:
-              print("\nSignoff validation failed!")
               sys.exit(1)
-          else:
-              print("\nAll signoff requirements met successfully!")
+          print("\nAll automated physical signoff checks PASSED.")
           EOF
