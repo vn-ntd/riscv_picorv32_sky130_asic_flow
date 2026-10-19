@@ -59,12 +59,21 @@ jobs:
               ("Worst Negative Slack (WNS)", float(data.get("wns", -1)), 0.0, "=="),
               ("Total Negative Slack (TNS)", float(data.get("tns", -1)), 0.0, "=="),
               ("Core Utilization (%)", float(data.get("OpenDP_Util", 0)), 65.0, ">="),
+              ("Antenna Net Violations (Limit <= 21)", float(data.get("net_antenna_violations", -1)), 21.0, "<="),
+              ("Antenna Pin Violations (Limit <= 22)", float(data.get("pin_antenna_violations", -1)), 22.0, "<="),
           ]
 
           failed = False
           print("\n=== PHYSICAL SIGNOFF METRIC VERIFICATION ===")
           for name, value, target, op in checks:
-              passed = (value == target) if op == "==" else (value >= target)
+              if op == "==":
+                  passed = (value == target)
+              elif op == ">=":
+                  passed = (value >= target)
+              elif op == "<=":
+                  passed = (value <= target)
+              else:
+                  passed = False
               status = "✅ PASS" if passed else "❌ FAIL"
               print(f"[{status}] {name}: {value} (Required: {op} {target})")
               if not passed:

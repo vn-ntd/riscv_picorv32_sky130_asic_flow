@@ -193,10 +193,10 @@ THIRD-PARTY COMPONENTS AND LICENSES:
    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-2. OpenLane Reference Scripts & Flow Configuration (config/, scripts/)
-   Copyright (c) 2020-2023 Efabless Corporation and contributors.
+2. ASIC Physical Implementation Flow, Custom Configurations & Automation Scripts (config/, scripts/, tb/, reports/)
+   Copyright (c) 2026 Tien Dung Nguyen
    Licensed under the Apache License, Version 2.0.
 
-3. ASIC Implementation Scripts, Testbench & Reports (tb/, config/, reports/, docs/)
-   Copyright (c) 2026 Tien Dung Nguyen
+3. OpenLane EDA Infrastructure References
+   OpenLane is Copyright (c) 2020-2023 Efabless Corporation and contributors.
    Licensed under the Apache License, Version 2.0.

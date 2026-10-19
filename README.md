@@ -6,11 +6,11 @@
 [![CI Verification](https://github.com/vn-ntd/riscv_picorv32_sky130_asic_flow/actions/workflows/verify_metrics.yml/badge.svg)](https://github.com/vn-ntd/riscv_picorv32_sky130_asic_flow/actions/workflows/verify_metrics.yml)
 [![DRC](https://img.shields.io/badge/Magic%20DRC-Clean%20(0%20violations)-brightgreen.svg)]()
 [![LVS](https://img.shields.io/badge/Netgen%20LVS-Clean%20(100%25%20Matched)-brightgreen.svg)]()
-[![Antenna Status](https://img.shields.io/badge/Antenna%20Nets-21%20violations-yellow.svg)]()
+[![Antenna Status](https://img.shields.io/badge/Antenna%20Status-21%20Nets%20Remaining-yellow.svg)]()
 
 This repository contains the complete **RTL-to-GDSII Physical Implementation** of a 32-bit RISC-V CPU core (**PicoRV32**) synthesized on the **SkyWater 130nm (`sky130_fd_sc_hd`)** open-source process design kit using the **OpenLane / OpenROAD** flow.
 
-The implementation is **signoff-clean at the OpenLane block/macro level** (hardened core macro ready for SoC integration or Caravel padframe wrapping), with 100% clean Magic DRC, 100% Netgen LVS netlist matching, and timing closure at **133.33 MHz** (Nominal PVT corner).
+The implementation achieves **DRC and LVS clean status at the OpenLane flow level** (with 0 Magic DRC violations, 0 TritonRoute detailed routing errors, and 100% matched Netgen LVS netlist verification). Setup and hold timing are closed at **133.33 MHz** (Nominal PVT corner). Antenna analysis indicates 21 net / 22 pin violations remaining on long global wires; full tapeout fabrication signoff requires adding port diodes or Caravel padframe integration.
 
 ---
 
@@ -53,15 +53,15 @@ The table below contrasts the initial exploratory baseline run against the final
 | **Physical Signoff** | Detailed Routing DRC | 0 violations | **0 violations** | Zero shorts, spacing, or min-hole violations |
 | | Magic DRC Signoff | 0 violations | **0 violations** | 100% clean on final GDSII layout stream |
 | | Netgen LVS Verification | 100% Matched | **100% Matched** | `Circuits match uniquely` (11,317/11,317 nets) |
-| | Antenna Violations (ARC) | 28 nets / 33 pins | **21 nets / 22 pins** | Global router jumper repair status (see details) |
-| | KLayout DRC / CVC | N/A (-1) | N/A (-1) | Magic DRC is primary signoff engine on Sky130 |
+| | Antenna Violations (ARC) | 28 nets / 33 pins | **21 nets / 22 pins** | Global router jumper repair status (detailed below) |
+| | KLayout DRC / CVC | N/A (-1) | N/A (-1) | Magic DRC is the primary signoff engine; KLayout DRC & CVC disabled (-1) |
 
 > **Transparency Note on Baseline:**  
-> The baseline values are recorded from intermediate exploratory run `run_clean_baseline`. The full set of physical signoff artifacts and reports committed in this repository corresponds directly to the final optimized implementation `run_final_68util_7p5ns`.
+> The baseline values are historical reference metrics recorded during an initial exploratory run (`run_clean_baseline`, 50% default utilization, unoptimized clock target) to quantify optimization gains. The full set of physical signoff artifacts, logs, GDSII layout, and OpenSTA reports committed in this repository corresponds directly to the final optimized implementation `run_final_68util_7p5ns`.
 
 ---
 
-## 🔍 Detailed Multi-Corner Timing Analysis
+## 🔍 Detailed Timing Analysis & Corner Derating
 
 To ensure complete technical rigor and avoid ambiguity regarding timing closure:
 
@@ -71,18 +71,17 @@ To ensure complete technical rigor and avoid ambiguity regarding timing closure:
   * Hold Margin = $\text{Arrival Time} - \text{Required Time} = +0.30\,\text{ns}$.
 * **WNS (Worst Negative Slack):** Standard EDA metric defined as $\min(0, \text{Slack})$. When all timing constraints are met with non-negative slack, **WNS = 0.00 ns** and **TNS = 0.00 ns**.
 
-### 2. Multi-Corner STA (PVT Corners) Breakdown
-Signoff timing analysis was performed using OpenSTA across multi-corner SPEF parasitic extractions:
+### 2. Timing Closure & Corner Analysis
+Post-routing Static Timing Analysis (OpenSTA post-SPEF RC parasitic extraction, recorded in `reports/29-rcx_sta.summary.rpt`) confirms timing closure on the **Nominal Corner (`tt_025C_1v80`)**:
 
-| Corner Name | Process Corner | Voltage | Temp | Max Data Path Delay | Setup Status at 7.50 ns (133.33 MHz) |
+| Analysis Condition | Process Corner | Voltage | Temp | Critical Path Delay | Timing Status at 7.50 ns (133.33 MHz) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Nominal (`nom`)** | Typical (`tt`) | 1.80 V | 25 °C | **7.33 ns** (pre-route) / **7.43 ns** (post-SPEF) | **MET (Slack: +0.07 ns, WNS: 0.00 ns)** |
-| **Slow (`max`)** | Slow-Slow (`ss`) | 1.60 V | 100 °C | **8.27 ns** | **Violated at 7.5ns (Slack: -0.77 ns)**<br>Closes timing at **120.9 MHz** ($T \ge 8.27\,\text{ns}$) |
-| **Fast (`min`)** | Fast-Fast (`ff`) | 1.95 V | -40 °C | **4.91 ns** | **MET (Hold Margin: +0.30 ns)** |
+| **Nominal Signoff (`29-rcx_sta.summary.rpt`)** | Typical (`tt`) | 1.80 V | 25 °C | **7.43 ns** (post-SPEF) | **MET (Setup Slack: +0.07 ns, WNS: 0.00 ns)**<br>**Hold Slack: +0.30 ns (Clean)** |
+| **Slow Corner Derating (`metrics.csv`)** | Slow-Slow (`ss`) | 1.60 V | 100 °C | **8.27 ns** | **Violated at 7.50 ns (Slack: -0.77 ns)**<br>Guarantees full closure at **120.9 MHz** ($T \ge 8.27\,\text{ns}$) |
 
-* **Timing Closure Scope:** The core achieves complete timing closure at **133.33 MHz (7.50 ns)** under Nominal conditions (`tt_025C_1v80`). When derated for the worst-case industrial Slow corner (`ss_100C_1v60`, high junction temperature and IR-drop derating), the maximum operating frequency is **120.9 MHz (8.27 ns)**.
+* **Operating Frequency Scope:** The core achieves complete timing closure at **133.33 MHz (7.50 ns)** under Nominal operating conditions (`tt_025C_1v80`). When derated for the worst-case industrial Slow corner (`ss_100C_1v60`, high junction temperature and IR-drop derating where the longest data path reaches 8.27 ns), the maximum operating frequency is **120.9 MHz**.
 
-### 3. Critical Path Breakdown (Nominal Corner, `13-cts_sta.log`)
+### 3. Critical Path Breakdown (Nominal Pre-Route CTS Baseline, `13-cts_sta.log`)
 ```text
 Startpoint: _16057_ (rising edge-triggered flip-flop clocked by clk)
 Endpoint:   _16118_ (rising edge-triggered flip-flop clocked by clk)
@@ -98,7 +97,7 @@ Clock Reconvergence (CRPR): +0.07 ns
 Library Setup Time:        -0.10 ns
 Total Data Required Time:   8.01 ns
 ---------------------------------------------------------------------
-Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff)
+Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff at 7.43 ns arrival)
 ```
 
 ---
@@ -127,26 +126,32 @@ Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff)
 
 ## 🧪 Functional Verification & Simulation
 
-A self-checking Verilog testbench (`tb/picorv32_tb.v`) is included to verify the RTL and gate-level netlists. The testbench models 64 KB of memory and executes a suite of RV32I instructions:
-* **Arithmetic:** `ADDI`, `ADD`, `SUB`
-* **Bitwise Logic:** `AND`, `OR`, `XOR`
-* **Shifts & Comparison:** `SLLI`, `SRLI`, `SLT`
-* **Memory Access:** Word store (`SW`) and load (`LW`)
-* **Branching & Control:** `BEQ`, `BNE`, `JAL` with an iterative summation loop ($\sum_{i=1}^{5} i = 15$)
+A self-checking Verilog testbench (`tb/picorv32_tb.v`) is provided to verify both RTL and post-PnR gate-level netlists using Icarus Verilog (`iverilog`). The testbench models 64 KB of memory with synthesis-matching parameters and executes an RV32I verification sequence:
+* **Arithmetic Operations:** `ADDI`, `ADD`, `SUB`
+* **Bitwise Logic Operations:** `AND`, `OR`, `XOR`
+* **Shifts & Comparisons:** `SLLI`, `SRLI`, `SLT`
+* **Memory Load / Store:** Word store (`SW`) and load (`LW`)
+* **Branching & Control Flow:** `BEQ`, `BNE`, `JAL` with an iterative summation loop ($\sum_{i=1}^{5} i = 15$)
 
 ### Running Simulation (Icarus Verilog):
 ```bash
-# RTL Simulation
+# 1. RTL Simulation (Executed in automated GitHub Actions CI)
 iverilog -o simv -s picorv32_tb src/picorv32a.v tb/picorv32_tb.v
 vvp simv
 
-# Expected Output:
-# [SIMULATION SUCCESS] RISC-V PicoRV32 Verification PASSED!
-# - Arithmetic: ADDI, ADD, SUB           -> PASS
-# - Bitwise Logic: AND, OR, XOR          -> PASS
-# - Shift / Compare: SLLI, SRLI, SLT     -> PASS
-# - Memory Access: SW, LW, BEQ           -> PASS
-# - Iterative Summation Loop: BNE, JAL   -> PASS (Sum 1..5 = 15)
+# 2. Gate-Level Simulation (GLS with SkyWater 130nm standard cell models)
+./tb/run_sim.sh gls
+
+# Expected Simulation Banner:
+# ============================================================
+#  [SIMULATION SUCCESS] RISC-V PicoRV32 Verification PASSED!
+#  - Arithmetic: ADDI, ADD, SUB           -> PASS
+#  - Bitwise Logic: AND, OR, XOR          -> PASS
+#  - Shift / Compare: SLLI, SRLI, SLT     -> PASS
+#  - Memory Access: SW, LW, BEQ           -> PASS
+#  - Iterative Summation Loop: BNE, JAL   -> PASS (Sum 1..5 = 15)
+#  - Total Elapsed Time: 1819000 ns
+# ============================================================
 ```
 
 ---
@@ -156,20 +161,21 @@ vvp simv
 ```
 .
 ├── .github/workflows/
-│   └── verify_metrics.yml     # Automated CI checking RTL simulation and signoff metrics
+│   └── verify_metrics.yml     # Automated CI running RTL simulation and signoff report assertions
+├── config.tcl                 # Top-level flow configuration for standard OpenLane directory mounts
 ├── config/
 │   └── config.tcl             # Optimized OpenLane flow configuration
 ├── src/
-│   ├── picorv32a.v            # RISC-V RV32I CPU core RTL source
+│   ├── picorv32a.v            # RISC-V RV32I CPU core RTL source (Claire Wolf, ISC License)
 │   └── constraints.sdc        # SDC timing constraints (clock period, uncertainty, IO delay)
 ├── tb/
-│   ├── picorv32_tb.v          # Self-checking functional testbench
+│   ├── picorv32_tb.v          # Self-checking functional testbench (supports RTL & GLS)
 │   └── run_sim.sh             # Simulation execution script (supports RTL and GLS)
 ├── results/
-│   ├── picorv32.gds           # Final GDSII layout stream (31.26 MB, Git LFS)
+│   ├── picorv32.gds           # Final GDSII layout stream (31.26 MB)
 │   ├── picorv32.gds.gz        # Compressed GDSII layout stream (6.0 MB)
 │   ├── picorv32.def           # Placed and routed DEF file (11.7 MB)
-│   ├── picorv32.v             # Final powered gate-level netlist (GLS)
+│   ├── picorv32.v             # Final powered gate-level netlist (GLS, 122k lines)
 │   ├── picorv32.spef          # RC parasitic extraction file (14.9 MB)
 │   ├── picorv32.sdc           # Signoff SDC constraints
 │   └── picorv32.spice         # Extracted SPICE netlist for LVS
@@ -178,14 +184,14 @@ vvp simv
 │   ├── manufacturability.rpt  # Signoff DRC / LVS / Antenna summary
 │   ├── drc.rpt                # Magic DRC 0-violation report
 │   ├── 37-picorv32.lef.lvs.log# Netgen LVS exact matching log
-│   ├── 29-rcx_sta.summary.rpt # STA slack summary
+│   ├── 29-rcx_sta.summary.rpt # Post-SPEF OpenSTA slack summary (Setup & Hold)
 │   ├── 29-rcx_sta.checks.rpt  # Slew, fanout, and capacitance checks
-│   ├── 12-cts.log             # Clock tree synthesis structure log
+│   ├── 12-cts.log             # Clock tree synthesis structure log (1,596 sinks, 155 buffers)
 │   └── 13-cts_sta.log         # Post-CTS timing and critical path log (9.7 MB)
 ├── scripts/
 │   ├── run_flow.sh            # Fully portable OpenLane containerized runner script
 │   └── export_layout_image.py # Automated KLayout layout render export script
-├── .gitattributes             # Git LFS configuration
+├── .gitattributes             # Git LFS & line ending normalization
 ├── LICENSE                    # Full Apache-2.0 & ISC License details
 └── README.md
 ```
@@ -217,7 +223,7 @@ cd riscv_picorv32_sky130_asic_flow
 
 ### 2. Run OpenLane Flow
 ```bash
-# Uses portable scripts/run_flow.sh (supports $OPENLANE_ROOT and $PDK_ROOT)
+# Uses portable scripts/run_flow.sh (supports host $PDK_ROOT with auto-discovery)
 ./scripts/run_flow.sh run_reproduce -overwrite
 ```
 
@@ -230,7 +236,7 @@ gzip -dk results/picorv32.gds.gz
 klayout -e -nn ~/.ciel/sky130A/libs.tech/klayout/tech/sky130A.lyt \
         results/picorv32.gds
 ```
-*(Press **F** in KLayout to fit the entire $383.8\,\mu\text{m} \times 383.8\,\mu\text{m}$ core to screen).*
+*(Press **F** in KLayout to fit the entire $400.7\,\mu\text{m} \times 400.7\,\mu\text{m}$ die boundary with the $383.8\,\mu\text{m} \times 383.8\,\mu\text{m}$ active core to screen).*
 
 ---
 

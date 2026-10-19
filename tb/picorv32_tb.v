@@ -22,7 +22,39 @@ module picorv32_tb;
     initial clk = 0;
     always #3.75 clk = ~clk;
 
-    // Instantiate PicoRV32 with default synthesis parameters
+    // Instantiate PicoRV32 (supports both RTL and post-PnR gate-level netlist)
+`ifdef GLS
+    wire VPWR = 1'b1;
+    wire VGND = 1'b0;
+    picorv32 uut (
+        .VPWR(VPWR),
+        .VGND(VGND),
+        .clk(clk),
+        .resetn(resetn),
+        .trap(trap),
+        .mem_valid(mem_valid),
+        .mem_instr(mem_instr),
+        .mem_ready(mem_ready),
+        .mem_addr(mem_addr),
+        .mem_wdata(mem_wdata),
+        .mem_wstrb(mem_wstrb),
+        .mem_rdata(mem_rdata),
+        .mem_la_read(),
+        .mem_la_write(),
+        .mem_la_addr(),
+        .mem_la_wdata(),
+        .mem_la_wstrb(),
+        .pcpi_valid(),
+        .pcpi_insn(),
+        .pcpi_rs1(),
+        .pcpi_rs2(),
+        .pcpi_wr(1'b0),
+        .pcpi_rd(32'd0),
+        .pcpi_wait(1'b0),
+        .pcpi_ready(1'b0),
+        .irq(32'd0)
+    );
+`else
     picorv32 uut (
         .clk(clk),
         .resetn(resetn),
@@ -49,6 +81,7 @@ module picorv32_tb;
         .pcpi_ready(1'b0),
         .irq(32'd0)
     );
+`endif
 
     // Memory Bus Protocol
     always @(posedge clk) begin

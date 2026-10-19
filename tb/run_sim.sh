@@ -29,7 +29,7 @@ if command -v iverilog &> /dev/null; then
         fi
         
         iverilog -o "${SCRIPT_DIR}/simv" \
-            -DFUNCTIONAL -DUNIT_DELAY=#1 \
+            -DFUNCTIONAL -DGLS -DUNIT_DELAY=#1 \
             -s picorv32_tb \
             "$PRIMITIVES_VERILOG" \
             "$STD_CELL_VERILOG" \
