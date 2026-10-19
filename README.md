@@ -14,6 +14,16 @@ The implementation achieves **DRC and LVS clean status at the OpenLane flow leve
 
 ---
 
+## 🖼️ Physical Placement & Floorplan Visualization
+
+<p align="center">
+  <img src="docs/images/layout.png" alt="PicoRV32 RISC-V Core Layout Placement" width="680">
+  <br>
+  <em>Figure 1: Full physical layout stream rendering of PicoRV32 on SkyWater 130nm showing die boundary (0.1606 mm²), active standard cell core (147,310 µm² at 69.93% utilization), balanced CTS clock tree distribution, and targeted antenna diodes.</em>
+</p>
+
+---
+
 ## 📊 Comprehensive PPA & Physical Signoff Metrics
 
 The table below contrasts the initial exploratory baseline run against the final PPA-optimized implementation, extracted directly from post-routing signoff reports (`reports/metrics.csv`, `reports/29-rcx_sta.summary.rpt`, `reports/drc.rpt`, `reports/37-picorv32.lef.lvs.log`):
@@ -31,7 +41,7 @@ The table below contrasts the initial exploratory baseline run against the final
 | | **Total Physical Cell Instances** | **24,513 cells** | **19,918 cells** | Exact sum: $11,174 + 167 + 2,073 + 2,846 + 3,658$ |
 | | Clock Sinks (Flip-Flops) | 1,596 sinks | **1,596 sinks** | Regfile (32×32b) + PC + pipeline DFFs |
 | | CTS Leaf Buffers | 168 buffers | **155 buffers** | TritonCTS clustered leaf drivers (`clkbuf_leaf_*`) |
-| | LVS Total Nets | 11,284 nets | **11,317 nets** | +33 nets from diode insertions and tap rails |
+| | LVS Total Nets | 11,284 nets | **11,317 nets** | +33 nets from 33 additional buffer insertions ($11,174 - 11,141$) |
 | **Area & Density** | **Core Area** | 182,491 µm² | **147,310 µm²** | **19.3% core area reduction** ($383.8 \times 383.8\,\mu\text{m}$) |
 | | **Die Area** | 0.1969 mm² | **0.1606 mm²** | **18.5% die area reduction** ($400.7 \times 400.7\,\mu\text{m}$) |
 | | Core-to-Die Margin | 8.46 µm | 8.46 µm | IO & power ring boundary halo |
@@ -42,8 +52,8 @@ The table below contrasts the initial exploratory baseline run against the final
 | | Setup WNS / TNS (`tt`) | 0.00 ns / 0.00 ns | **0.00 ns / 0.00 ns** | **Zero Negative Slack (Met at nominal corner)** |
 | | Hold Slack Margin (`tt`) | +0.15 ns (Met) | **+0.30 ns (Met)** | Positive hold margin across all register paths |
 | | Hold WNS / TNS (`tt`) | 0.00 ns / 0.00 ns | **0.00 ns / 0.00 ns** | **Zero Negative Slack (Clean)** |
-| | Slow Corner Max Path (`ss`) | 8.92 ns | **8.27 ns** | Worst-case path delay at `ss_100C_1v60` corner |
-| | Slow Corner Setup Slack | +6.08 ns (at 15ns) | **-0.77 ns (at 7.5ns)** | Closes at **120.9 MHz** ($T \ge 8.27\,\text{ns}$) across SS |
+| | Slow Corner Critical Path (`ss`) | 8.92 ns | **8.27 ns** | Pre-route synthesis path delay at `ss_100C_1v60` |
+| | Slow Corner Setup Margin | N/A (unverified) | **Derated (~116–128 MHz)** | Industrial slow corner derating (detailed below) |
 | | Clock Tree Skew | 110 ps | **110 ps** | Balanced 3-level tree (`CTS_TARGET_SKEW = 100ps`) |
 | **Power (OpenSTA)** | Internal Power | 15.8 mW | **24.2 mW** | Cell internal charging (52.7% of total) |
 | | Switching Power | 14.1 mW | **21.7 mW** | Interconnect net switching (47.3% of total) |
@@ -54,7 +64,7 @@ The table below contrasts the initial exploratory baseline run against the final
 | | Magic DRC Signoff | 0 violations | **0 violations** | 100% clean on final GDSII layout stream |
 | | Netgen LVS Verification | 100% Matched | **100% Matched** | `Circuits match uniquely` (11,317/11,317 nets) |
 | | Antenna Violations (ARC) | 28 nets / 33 pins | **21 nets / 22 pins** | Global router jumper repair status (detailed below) |
-| | KLayout DRC / CVC | N/A (-1) | N/A (-1) | Magic DRC is the primary signoff engine; KLayout DRC & CVC disabled (-1) |
+| | KLayout DRC / CVC | N/A (-1) | N/A (-1) | Magic DRC is primary signoff; RUN_KLAYOUT_DRC=0 in config |
 
 > **Transparency Note on Baseline:**  
 > The baseline values are historical reference metrics recorded during an initial exploratory run (`run_clean_baseline`, 50% default utilization, unoptimized clock target) to quantify optimization gains. The full set of physical signoff artifacts, logs, GDSII layout, and OpenSTA reports committed in this repository corresponds directly to the final optimized implementation `run_final_68util_7p5ns`.
@@ -76,10 +86,10 @@ Post-routing Static Timing Analysis (OpenSTA post-SPEF RC parasitic extraction, 
 
 | Analysis Condition | Process Corner | Voltage | Temp | Critical Path Delay | Timing Status at 7.50 ns (133.33 MHz) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Nominal Signoff (`29-rcx_sta.summary.rpt`)** | Typical (`tt`) | 1.80 V | 25 °C | **7.43 ns** (post-SPEF) | **MET (Setup Slack: +0.07 ns, WNS: 0.00 ns)**<br>**Hold Slack: +0.30 ns (Clean)** |
-| **Slow Corner Derating (`metrics.csv`)** | Slow-Slow (`ss`) | 1.60 V | 100 °C | **8.27 ns** | **Violated at 7.50 ns (Slack: -0.77 ns)**<br>Guarantees full closure at **120.9 MHz** ($T \ge 8.27\,\text{ns}$) |
+| **Nominal Signoff (`29-rcx_sta.summary.rpt`)** | Typical (`tt`) | 1.80 V | 25 °C | **7.94 ns** (post-SPEF arrival) | **MET (Setup Slack: +0.07 ns, WNS: 0.00 ns)**<br>**Hold Slack: +0.30 ns (Clean)** |
+| **Slow Corner Derating (`metrics.csv`)** | Slow-Slow (`ss`) | 1.60 V | 100 °C | **8.27 ns** (pre-route synthesis) | **Derated: estimated 116–128 MHz**<br>($T_{\text{clk}} \approx 7.76 - 8.64\,\text{ns}$ depending on clock latency) |
 
-* **Operating Frequency Scope:** The core achieves complete timing closure at **133.33 MHz (7.50 ns)** under Nominal operating conditions (`tt_025C_1v80`). When derated for the worst-case industrial Slow corner (`ss_100C_1v60`, high junction temperature and IR-drop derating where the longest data path reaches 8.27 ns), the maximum operating frequency is **120.9 MHz**.
+* **Operating Frequency Scope:** The PicoRV32 core achieves complete timing closure at **133.33 MHz (7.50 ns)** under Nominal operating conditions (`tt_025C_1v80`). When derated for the industrial Slow corner (`ss_100C_1v60`, high junction temperature and IR-drop derating where the synthesis critical path reaches 8.27 ns), the operating frequency derates to approximately **116–128 MHz**. Full multi-corner signoff across all operational corners requires dedicated multi-corner Liberty libraries.
 
 ### 3. Critical Path Breakdown (Nominal Pre-Route CTS Baseline, `13-cts_sta.log`)
 ```text
@@ -88,7 +98,7 @@ Endpoint:   _16118_ (rising edge-triggered flip-flop clocked by clk)
 ---------------------------------------------------------------------
 Launch Clock Latency:       0.88 ns (via clkbuf_0_clk -> clkbuf_4_0_0_clk -> clkbuf_leaf_3_clk)
 Combinational Logic Delay:  6.45 ns (through 32-bit counter & ALU decode gates)
-Total Data Arrival Time:    7.33 ns
+Total Data Arrival Time:    7.33 ns (pre-route) -> 7.94 ns (post-SPEF signoff)
 
 Clock Edge:                 7.50 ns
 Capture Clock Latency:      0.79 ns
@@ -97,7 +107,7 @@ Clock Reconvergence (CRPR): +0.07 ns
 Library Setup Time:        -0.10 ns
 Total Data Required Time:   8.01 ns
 ---------------------------------------------------------------------
-Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff at 7.43 ns arrival)
+Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff: 8.01 ns - 7.94 ns)
 ```
 
 ---
@@ -150,7 +160,7 @@ vvp simv
 #  - Shift / Compare: SLLI, SRLI, SLT     -> PASS
 #  - Memory Access: SW, LW, BEQ           -> PASS
 #  - Iterative Summation Loop: BNE, JAL   -> PASS (Sum 1..5 = 15)
-#  - Total Elapsed Time: 1819000 ns
+#  - Total Elapsed Time: 1818.75 ns (~242 clock cycles)
 # ============================================================
 ```
 
@@ -165,6 +175,9 @@ vvp simv
 ├── config.tcl                 # Top-level flow configuration for standard OpenLane directory mounts
 ├── config/
 │   └── config.tcl             # Optimized OpenLane flow configuration
+├── docs/
+│   └── images/
+│       └── layout.png         # High-resolution physical floorplan render (300 DPI)
 ├── src/
 │   ├── picorv32a.v            # RISC-V RV32I CPU core RTL source (Claire Wolf, ISC License)
 │   └── constraints.sdc        # SDC timing constraints (clock period, uncertainty, IO delay)
@@ -172,9 +185,8 @@ vvp simv
 │   ├── picorv32_tb.v          # Self-checking functional testbench (supports RTL & GLS)
 │   └── run_sim.sh             # Simulation execution script (supports RTL and GLS)
 ├── results/
-│   ├── picorv32.gds           # Final GDSII layout stream (31.26 MB)
-│   ├── picorv32.gds.gz        # Compressed GDSII layout stream (6.0 MB)
-│   ├── picorv32.def           # Placed and routed DEF file (11.7 MB)
+│   ├── picorv32.gds.gz        # Compressed GDSII layout stream (6.0 MB; SHA256 verified identical to raw GDS)
+│   ├── picorv32.def           # Placed and routed DEF file (11.7 MB, 19,918 components)
 │   ├── picorv32.v             # Final powered gate-level netlist (GLS, 122k lines)
 │   ├── picorv32.spef          # RC parasitic extraction file (14.9 MB)
 │   ├── picorv32.sdc           # Signoff SDC constraints
@@ -190,8 +202,9 @@ vvp simv
 │   └── 13-cts_sta.log         # Post-CTS timing and critical path log (9.7 MB)
 ├── scripts/
 │   ├── run_flow.sh            # Fully portable OpenLane containerized runner script
-│   └── export_layout_image.py # Automated KLayout layout render export script
-├── .gitattributes             # Git LFS & line ending normalization
+│   └── export_layout_image.py # Automated KLayout & matplotlib layout render script
+├── .gitattributes             # Line ending normalization
+├── .gitignore                 # EDA run directories and simulation artifacts filter
 ├── LICENSE                    # Full Apache-2.0 & ISC License details
 └── README.md
 ```

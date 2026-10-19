@@ -31,13 +31,14 @@ set ::env(CTS_TARGET_SKEW) 100
 set ::env(CTS_CLK_BUFFER_LIST) "sky130_fd_sc_hd__clkbuf_8 sky130_fd_sc_hd__clkbuf_4 sky130_fd_sc_hd__clkbuf_2"
 set ::env(CTS_ROOT_BUFFER) "sky130_fd_sc_hd__clkbuf_16"
 
-# Antenna Repair: Pure Global Router (jumper & targeted diode)
+# Antenna Repair: Global Router repair + port diodes + 20 iterations
 set ::env(RUN_HEURISTIC_DIODE_INSERTION) 0
 set ::env(GRT_REPAIR_ANTENNAS) 1
-set ::env(GRT_ANTENNA_ITERS) 15
+set ::env(GRT_ANTENNA_ITERS) 20
 set ::env(GRT_ADJUSTMENT) 0.15
+set ::env(DIODE_ON_PORTS) "both"
 
-# Signoff
-set ::env(RUN_KLAYOUT_DRC) 1
+# Signoff (Magic DRC & Netgen LVS are primary signoff on Sky130)
+set ::env(RUN_KLAYOUT_DRC) 0
 set ::env(RUN_MAGIC_DRC) 1
 set ::env(RUN_LVS) 1

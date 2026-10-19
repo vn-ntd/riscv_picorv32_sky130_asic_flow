@@ -20,6 +20,7 @@ if command -v iverilog &> /dev/null; then
     elif [ "$MODE" == "gls" ]; then
         echo "[INFO] Compiling Gate-Level Simulation (GLS)..."
         PDK_ROOT=${PDK_ROOT:-$HOME/.ciel}
+        [ ! -d "$PDK_ROOT/sky130A" ] && [ -d "$HOME/.volare/sky130A" ] && PDK_ROOT="$HOME/.volare"
         STD_CELL_VERILOG="${PDK_ROOT}/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v"
         PRIMITIVES_VERILOG="${PDK_ROOT}/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v"
         
@@ -43,9 +44,17 @@ if command -v iverilog &> /dev/null; then
 else
     echo "iverilog not found in host PATH. Running inside OpenLane Docker container..."
     DOCKER_IMAGE="ghcr.io/the-openroad-project/openlane:ff5509f65b17bfa4068d5336495ab1718987ff69-amd64"
-    docker run --rm \
-        -v "${REPO_ROOT}:/work" \
-        -w /work/tb \
-        "$DOCKER_IMAGE" \
-        iverilog -o /tmp/simv -s picorv32_tb /work/src/picorv32a.v /work/tb/picorv32_tb.v && vvp /tmp/simv
+    if [ "$MODE" == "rtl" ]; then
+        docker run --rm \
+            -v "${REPO_ROOT}:/work" \
+            -w /work/tb \
+            "$DOCKER_IMAGE" \
+            sh -c "iverilog -o /tmp/simv -s picorv32_tb /work/src/picorv32a.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
+    elif [ "$MODE" == "gls" ]; then
+        docker run --rm \
+            -v "${REPO_ROOT}:/work" \
+            -w /work/tb \
+            "$DOCKER_IMAGE" \
+            sh -c "iverilog -o /tmp/simv -DFUNCTIONAL -DGLS -DUNIT_DELAY=#1 -s picorv32_tb /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /work/results/picorv32.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
+    fi
 fi

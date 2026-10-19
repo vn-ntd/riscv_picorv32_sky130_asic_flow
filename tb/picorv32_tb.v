@@ -117,7 +117,7 @@ module picorv32_tb;
                             $display(" - Shift / Compare: SLLI, SRLI, SLT     -> PASS");
                             $display(" - Memory Access: SW, LW, BEQ           -> PASS");
                             $display(" - Iterative Summation Loop: BNE, JAL   -> PASS (Sum 1..5 = 15)");
-                            $display(" - Total Elapsed Time: %0t ns", $time);
+                            $display(" - Total Elapsed Time: %0.2f ns (~%0d clock cycles)", $realtime, $realtime / 7.5);
                             $display("============================================================\n");
                             $finish;
                         end else if (mem_wdata == 32'h0000_0002) begin

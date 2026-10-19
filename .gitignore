@@ -1,0 +1,20 @@
+# OpenLane run directories
+runs/
+*.run/
+
+# Simulation binaries and waveform logs
+tb/simv
+tb/*.vcd
+tb/*.log
+simv
+*.vcd
+*.log
+
+# Python cache and system files
+__pycache__/
+*.pyc
+*~
+.DS_Store
+
+# Large raw GDS (keep compressed picorv32.gds.gz in version control)
+results/picorv32.gds
