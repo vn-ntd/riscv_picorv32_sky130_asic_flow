@@ -7,6 +7,7 @@
 [![DRC](https://img.shields.io/badge/Magic%20DRC-Clean%20(0%20violations)-brightgreen.svg)]()
 [![LVS](https://img.shields.io/badge/Netgen%20LVS-Clean%20(100%25%20Matched)-brightgreen.svg)]()
 [![Antenna Status](https://img.shields.io/badge/Antenna%20Status-21%20Nets%20Remaining-yellow.svg)]()
+[![GLS Verification](https://img.shields.io/badge/Gate--Level%20Sim-PASS%20(243%20cycles)-brightgreen.svg)]()
 
 This repository contains the complete **RTL-to-GDSII Physical Implementation** of a 32-bit RISC-V CPU core (**PicoRV32**) synthesized on the **SkyWater 130nm (`sky130_fd_sc_hd`)** open-source process design kit using the **OpenLane / OpenROAD** flow.
 
@@ -187,6 +188,7 @@ vvp simv
 ├── results/
 │   ├── picorv32.gds.gz        # Compressed GDSII layout stream (6.0 MB; SHA256 verified identical to raw GDS)
 │   ├── picorv32.def           # Placed and routed DEF file (11.7 MB, 19,918 components)
+│   ├── picorv32.lef           # Extracted abstract LEF view for SoC integration (96 KB)
 │   ├── picorv32.v             # Final powered gate-level netlist (GLS, 122k lines)
 │   ├── picorv32.spef          # RC parasitic extraction file (14.9 MB)
 │   ├── picorv32.sdc           # Signoff SDC constraints
@@ -250,6 +252,16 @@ klayout -e -nn ~/.ciel/sky130A/libs.tech/klayout/tech/sky130A.lyt \
         results/picorv32.gds
 ```
 *(Press **F** in KLayout to fit the entire $400.7\,\mu\text{m} \times 400.7\,\mu\text{m}$ die boundary with the $383.8\,\mu\text{m} \times 383.8\,\mu\text{m}$ active core to screen).*
+
+### 4. Run Functional Verification (RTL & Gate-Level Simulation)
+```bash
+# Execute behavioral RTL simulation
+./tb/run_sim.sh rtl
+
+# Execute post-PnR Gate-Level Simulation with SkyWater 130nm standard cell models
+./tb/run_sim.sh gls
+```
+*(Both RTL and GLS suites execute a 42-word RV32I verification sequence testing arithmetic, bitwise logic, shift, compare, memory load/store, and branching, finishing in 243 clock cycles with `[SIMULATION SUCCESS]` confirmation).*
 
 ---
 
