@@ -1,0 +1,62 @@
+﻿name: Physical Signoff Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  verify-signoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Validate Physical Signoff Metrics
+        run: |
+          python3 - << 'EOF'
+          import csv
+          import sys
+
+          metrics_file = "reports/metrics.csv"
+          print(f"Reading {metrics_file}...")
+          
+          with open(metrics_file, 'r') as f:
+              reader = csv.DictReader(f)
+              rows = list(reader)
+              if not rows:
+                  print("Error: metrics.csv is empty!")
+                  sys.exit(1)
+              data = rows[0]
+
+          checks = [
+              ("Magic DRC Violations", float(data.get("Magic_violations", -1)), 0.0, "=="),
+              ("Detailed Routing DRC", float(data.get("tritonRoute_violations", -1)), 0.0, "=="),
+              ("LVS Total Errors", float(data.get("lvs_total_errors", -1)), 0.0, "=="),
+              ("Worst Negative Slack (WNS)", float(data.get("wns", -1)), 0.0, "=="),
+              ("Total Negative Slack (TNS)", float(data.get("tns", -1)), 0.0, "=="),
+              ("Core Utilization (%)", float(data.get("OpenDP_Util", 0)), 65.0, ">="),
+          ]
+
+          failed = False
+          print("\n=== SIGN-OFF QUALITY ASSURANCE REPORT ===")
+          for name, value, target, op in checks:
+              passed = (value == target) if op == "==" else (value >= target)
+              status = "✅ PASS" if passed else "❌ FAIL"
+              print(f"[{status}] {name}: Value = {value} (Required: {op} {target})")
+              if not passed:
+                  failed = True
+
+          if failed:
+              print("\nSignoff validation failed!")
+              sys.exit(1)
+          else:
+              print("\nAll signoff requirements met successfully!")
+          EOF
