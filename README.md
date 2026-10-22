@@ -111,44 +111,43 @@ While the PicoRV32 core is an open-source RISC-V implementation authored by Clai
 
 ---
 
-## 🔍 Detailed Timing Analysis & Corner Derating
+## 🔍 Detailed Timing Analysis (Nominal Corner)
 
-To ensure technical rigor and avoid confusion regarding multi-corner timing closure:
+All numbers below come from the post-SPEF signoff report `reports/29-rcx_sta.checks.rpt` and `reports/29-rcx_sta.summary.rpt`.
 
 ### 1. Difference Between Slack (Margin) and WNS (Worst Negative Slack)
-* **Worst Slack (Margin):** The actual timing margin relative to clock required time.
-  * Setup Margin = $\text{Data Required Time} - \text{Data Arrival Time} = 8.01\,\text{ns} - 7.94\,\text{ns} = \mathbf{+0.07\,\text{ns}}$ at Nominal corner.
-  * Hold Margin = $\text{Data Arrival Time} - \text{Data Required Time} = \mathbf{+0.30\,\text{ns}}$.
-* **WNS (Worst Negative Slack):** Standard EDA metric defined as $\min(0, \text{Slack})$. When all timing constraints are met with non-negative slack, **WNS = 0.00 ns** and **TNS = 0.00 ns**.
+* **Worst Slack (Margin):** The actual timing margin relative to the required time.
+  * Setup Margin = $\text{Data Required Time} - \text{Data Arrival Time} = 8.34\,\text{ns} - 8.27\,\text{ns} = \mathbf{+0.07\,\text{ns}}$.
+  * Hold Margin = $\mathbf{+0.30\,\text{ns}}$ (`report_worst_slack -min`).
+* **WNS (Worst Negative Slack):** $\min(0, \text{Slack})$. With all paths meeting timing, **WNS = 0.00 ns** and **TNS = 0.00 ns**.
 
-### 2. Multi-Corner Timing Breakdown
+### 2. Corner Coverage
 
-| Operating Condition | Process Corner | Voltage | Temp | Critical Path Delay | Timing Status at 7.50 ns (133.33 MHz) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Nominal Signoff (`29-rcx_sta.summary.rpt`)** | Typical (`tt`) | 1.80 V | 25 °C | **7.94 ns** (post-SPEF arrival) | **MET (Setup Slack: +0.07 ns, WNS: 0.00 ns)**<br>**Hold Slack: +0.30 ns (Clean)** |
-| **Slow Corner Derating (`metrics.csv`)** | Slow-Slow (`ss`) | 1.60 V | 100 °C | **8.27 ns** (pre-route synthesis) | **Derated: 116–120 MHz safe operation**<br>($T_{\text{clk}} \approx 8.3 - 8.6\,\text{ns}$ under worst-case PVT) |
+| Operating Condition | Process Corner | Voltage | Temp | Result at 7.50 ns (133.33 MHz) |
+| :--- | :---: | :---: | :---: | :--- |
+| **Nominal signoff** | Typical (`tt`) | 1.80 V | 25 °C | **MET** (Setup +0.07 ns, Hold +0.30 ns, WNS/TNS 0.00) |
 
-* **Nominal Closure:** The design achieves complete timing closure at **133.33 MHz (7.50 ns)** under Nominal operating conditions (`tt_025C_1v80`).
-* **Slow Corner Derating:** The 8.27 ns path delay represents the critical path synthesized under the industrial Slow corner (`ss_100C_1v60`: 100°C junction temperature, 1.60V core supply reflecting 10% IR drop). Under these worst-case conditions, the maximum reliable operating frequency derates to **116–120 MHz**.
+> [!NOTE]
+> Only the nominal `tt_025C_1v80` corner was analyzed in this flow. No slow (`ss`) or fast (`ff`) corner signoff was run, so this repository makes **no claim** about timing closure or maximum frequency at other PVT corners. Multi-corner STA (e.g. `ss_100C_1v60`, `ff_n40C_1v95`) is listed as future work.
 
-### 3. Critical Path Timing Breakdown (Nominal Post-CTS, `13-cts_sta.log`)
+### 3. Critical Setup Path (Nominal, Post-SPEF, `29-rcx_sta.checks.rpt`)
 
 ```text
-Startpoint: _16057_ (rising edge-triggered flip-flop clocked by clk)
-Endpoint:   _16118_ (rising edge-triggered flip-flop clocked by clk)
+Startpoint: _16584_ (rising edge-triggered flip-flop clocked by clk)   [cpu_state[1]]
+Endpoint:   _15992_ (rising edge-triggered flip-flop clocked by clk)
 ---------------------------------------------------------------------
-Launch Clock Latency:       0.88 ns (via clkbuf_0_clk -> clkbuf_4_0_0_clk -> clkbuf_leaf_3_clk)
-Combinational Logic Delay:  6.45 ns (through 32-bit counter & ALU decode gates)
-Total Data Arrival Time:    7.33 ns (pre-route) -> 7.94 ns (post-SPEF signoff)
+Launch Clock Latency:       1.30 ns
+Clock-to-Q + Combinational: 6.97 ns  (and4/and3 chain)
+Data Arrival Time:          8.27 ns
 
 Clock Edge:                 7.50 ns
-Capture Clock Latency:      0.79 ns
+Capture Clock Latency:      1.12 ns
 Clock Uncertainty:         -0.25 ns
 Clock Reconvergence (CRPR): +0.07 ns
 Library Setup Time:        -0.10 ns
-Total Data Required Time:   8.01 ns
+Data Required Time:         8.34 ns
 ---------------------------------------------------------------------
-Setup Slack (Margin):      +0.68 ns (pre-route) -> +0.07 ns (post-SPEF signoff: 8.01 ns - 7.94 ns)
+Setup Slack (Margin):      +0.07 ns (MET)   (8.34 ns - 8.27 ns)
 ```
 
 ---
