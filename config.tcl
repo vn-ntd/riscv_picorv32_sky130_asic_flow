@@ -1,3 +1,10 @@
+# ==============================================================================
+# OpenLane Flow Configuration (Root Alias)
+# Note: When mounting the repository root as the OpenLane design directory:
+#   docker run -v $(pwd):/openlane/designs/picorv32 ... flow.tcl -design picorv32
+# OpenLane expects config.tcl at the root of the design directory.
+# This file is intentionally kept synchronized with config/config.tcl.
+# ==============================================================================
 # Optimized Config: 68% Core Utilization + 7.5ns Period (133.3 MHz) + Safe GRT Antenna Repair
 set ::env(DESIGN_NAME) "picorv32"
 set ::env(VERILOG_FILES) "$::env(DESIGN_DIR)/src/picorv32a.v"

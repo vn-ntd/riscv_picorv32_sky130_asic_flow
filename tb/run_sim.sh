@@ -4,11 +4,19 @@ set -e
 SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 MODE=${1:-rtl}
+SIM_ARGS="${@:2}"
 
 echo "=========================================================="
 echo " Running Verification Simulation for RISC-V PicoRV32"
-echo " Mode: ${MODE}"
+echo " Mode:     ${MODE}"
+echo " Options:  ${SIM_ARGS:-None}"
 echo "=========================================================="
+
+# Ensure default firmware.hex exists if not already present
+if [ ! -f "${REPO_ROOT}/sw/firmware.hex" ]; then
+    echo "[INFO] sw/firmware.hex not found. Generating default image..."
+    python3 "${REPO_ROOT}/sw/make_hex.py" "${REPO_ROOT}/sw/firmware.hex" 2>/dev/null || python "${REPO_ROOT}/sw/make_hex.py" "${REPO_ROOT}/sw/firmware.hex"
+fi
 
 if command -v iverilog &> /dev/null; then
     if [ "$MODE" == "rtl" ]; then
@@ -39,7 +47,8 @@ if command -v iverilog &> /dev/null; then
     fi
     
     echo "[INFO] Executing simulation binary..."
-    vvp "${SCRIPT_DIR}/simv"
+    cd "${REPO_ROOT}"
+    vvp "${SCRIPT_DIR}/simv" ${SIM_ARGS}
     rm -f "${SCRIPT_DIR}/simv"
 else
     echo "iverilog not found in host PATH. Running inside OpenLane Docker container..."
@@ -47,14 +56,14 @@ else
     if [ "$MODE" == "rtl" ]; then
         docker run --rm \
             -v "${REPO_ROOT}:/work" \
-            -w /work/tb \
+            -w /work \
             "$DOCKER_IMAGE" \
-            sh -c "iverilog -o /tmp/simv -s picorv32_tb /work/src/picorv32a.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
+            sh -c "iverilog -o /tmp/simv -s picorv32_tb /work/src/picorv32a.v /work/tb/picorv32_tb.v && vvp /tmp/simv ${SIM_ARGS} && rm -f /tmp/simv"
     elif [ "$MODE" == "gls" ]; then
         docker run --rm \
             -v "${REPO_ROOT}:/work" \
-            -w /work/tb \
+            -w /work \
             "$DOCKER_IMAGE" \
-            sh -c "iverilog -o /tmp/simv -DFUNCTIONAL -DUSE_POWER_PINS -DGLS -DUNIT_DELAY=#1 -s picorv32_tb /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /work/results/picorv32.v /work/tb/picorv32_tb.v && vvp /tmp/simv && rm -f /tmp/simv"
+            sh -c "iverilog -o /tmp/simv -DFUNCTIONAL -DUSE_POWER_PINS -DGLS -DUNIT_DELAY=#1 -s picorv32_tb /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v /openlane/pdks/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /work/results/picorv32.v /work/tb/picorv32_tb.v && vvp /tmp/simv ${SIM_ARGS} && rm -f /tmp/simv"
     fi
 fi

@@ -183,9 +183,11 @@ flowchart LR
     D --> F
 ```
 
-### 1. Testbench Architecture & Test Vectors (`tb/picorv32_tb.v`)
-The testbench models a 64 KB memory subsystem and executes a 42-word RV32I verification sequence covering:
-* **Arithmetic Operations:** `ADDI`, `ADD`, `SUB`
+### 1. Testbench Architecture & Firmware (`tb/picorv32_tb.v` & `sw/`)
+The testbench models a 64 KB unified memory subsystem. Programs can be dynamically compiled from bare-metal C in `sw/` into 32-bit hex words loaded via `$readmemh` (or fall back automatically to the built-in self-checking sequence if no hex is provided).
+
+The firmware suite covers:
+* **Arithmetic Operations:** `ADDI`, `ADD`, `SUB`, soft-multiply
 * **Bitwise Logic Operations:** `AND`, `OR`, `XOR`
 * **Shifts & Comparisons:** `SLLI`, `SRLI`, `SLT`
 * **Memory Load / Store:** Word store (`SW`) and load (`LW`)
@@ -193,11 +195,15 @@ The testbench models a 64 KB memory subsystem and executes a 42-word RV32I verif
 
 ### 2. Executing Simulation
 ```bash
-# 1. Behavioral RTL Simulation (Fast functional sanity check)
-./tb/run_sim.sh rtl
+# 1. Compile C firmware (or generate reference hex)
+make firmware
 
-# 2. Post-PnR Gate-Level Simulation (GLS with SkyWater 130nm standard cell models)
-./tb/run_sim.sh gls
+# 2. Behavioral RTL Simulation (Fast functional check)
+make sim-rtl
+# Alternatively: ./tb/run_sim.sh rtl +firmware=sw/firmware.hex +vcd
+
+# 3. Post-PnR Gate-Level Simulation (GLS with SkyWater 130nm standard cell models)
+make sim-gls
 ```
 
 ### 3. Simulation Output
@@ -221,17 +227,25 @@ The testbench models a 64 KB memory subsystem and executes a 42-word RV32I verif
 .
 ├── .github/workflows/
 │   └── verify_metrics.yml     # Automated CI running RTL simulation and signoff report assertions
+├── Makefile                   # Top-level unified automation runner (sim, firmware, flow)
 ├── config.tcl                 # Top-level flow configuration for standard OpenLane directory mounts
 ├── config/
 │   └── config.tcl             # Optimized OpenLane flow configuration (1536 bytes)
 ├── docs/
 │   └── images/
 │       └── layout.png         # High-resolution physical floorplan render (300 DPI)
+├── sw/                        # Bare-metal software & C firmware environment
+│   ├── main.c                 # C test suite (arithmetic, memory integrity, loop)
+│   ├── crt0.s                 # Bare-metal startup assembly (sp init, bss clear, status write)
+│   ├── sections.lds           # Linker script for 64 KB memory space
+│   ├── make_hex.py            # Binary-to-hex converter & standalone hex generator
+│   ├── Makefile               # Firmware compilation toolchain wrapper
+│   └── firmware.hex           # 32-bit word aligned precompiled hex image
 ├── src/
 │   ├── picorv32a.v            # RISC-V RV32I CPU core RTL source (Claire Wolf, ISC License)
 │   └── constraints.sdc        # SDC timing constraints (clock period, uncertainty, IO delay)
 ├── tb/
-│   ├── picorv32_tb.v          # Self-checking functional testbench (supports RTL & GLS)
+│   ├── picorv32_tb.v          # Self-checking functional testbench (supports RTL, GLS, $readmemh, VCD)
 │   └── run_sim.sh             # Simulation execution script (executable, dual-mode RTL/GLS)
 ├── results/
 │   ├── picorv32.gds.gz        # Compressed GDSII layout stream (6.0 MB; SHA256 verified)
