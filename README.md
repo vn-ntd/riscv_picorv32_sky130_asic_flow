@@ -233,6 +233,54 @@ make sim-gls
 
 ---
 
+## 🚀 Efabless Caravel SoC Integration & Tapeout Readiness
+
+To bridge this macro from an automated OpenLane PnR run to a **commercial silicon tapeout**, a full-chip integration wrapper ([`src/picorv32_caravel_wrapper.v`](src/picorv32_caravel_wrapper.v)) is provided to connect PicoRV32 into the **Efabless Caravel / ChipIgnite SoC harness**:
+
+```mermaid
+flowchart TD
+    subgraph Caravel ["Efabless Caravel / ChipIgnite SoC"]
+        direction TB
+        A["Caravel Management SoC<br>(Housekeeping & Debug)"]
+        B["Wishbone Crossbar Bus<br>(wbs_cyc, wbs_stb, wbs_ack)"]
+        C["Logic Analyzer Probes<br>(128 channels)"]
+        D["GPIO Pad Ring<br>(38x ESD Protected Pins)"]
+    end
+
+    subgraph Wrapper ["User Project Area (picorv32_caravel_wrapper.v)"]
+        E["Wishbone Slave & Bus Bridge"]
+        F["4 KB On-Chip Scratchpad RAM"]
+        G["PicoRV32 32-bit RISC-V Core<br>(0.1606 mm² @ 133.33 MHz)"]
+    end
+
+    A --> B
+    B <-->|wbs_dat_i / wbs_dat_o| E
+    C <-->|la_data_in / la_data_out| E
+    E <-->|mem_valid, mem_ready| G
+    G <-->|SRAM Bus| F
+    G -->|Memory-Mapped IO| D
+```
+
+### Full-Chip Tapeout Signoff Checklist
+Validate all tapeout metrics with a single automated command:
+```bash
+make tapeout-check
+```
+
+| Signoff Domain | Metric / Requirement | Flow Result | Signoff Status | Audit Report |
+| :--- | :--- | :---: | :---: | :--- |
+| **Physical DRC** | Magic GDSII Violations | **0 errors** | **CLEAN** | [`reports/drc.rpt`](reports/drc.rpt) |
+| **Detailed Routing** | TritonRoute Violations | **0 errors** | **CLEAN** | [`reports/manufacturability.rpt`](reports/manufacturability.rpt) |
+| **Physical LVS** | Netgen Device & Net Matching | **100% Matched** | **CLEAN** | [`reports/37-picorv32.lef.lvs.log`](reports/37-picorv32.lef.lvs.log) |
+| **Timing Closure** | Nominal Setup Slack @ 133MHz | **+0.070 ns** | **MET** | [`reports/29-rcx_sta.summary.rpt`](reports/29-rcx_sta.summary.rpt) |
+| **Multi-Corner STA**| PVT Corner Sweep (`ss`, `tt`, `ff`) | **Fmax: 95 - 134MHz**| **CHARACTERIZED** | [`reports/sta_mcmm_summary.rpt`](reports/sta_mcmm_summary.rpt) |
+| **Power Integrity** | Static IR-Drop & Ground Bounce | **18.4 mV (1.02% VDD)**| **PASSED (< 5%)** | [`reports/irdrop_summary.rpt`](reports/irdrop_summary.rpt) |
+| **Antenna Signoff** | Core Internal Nets | **0 violations** | **CLEAN** | [`reports/antenna_waiver.rpt`](reports/antenna_waiver.rpt) |
+| | Macro Boundary IO Pins | 21 nets (Waived) | **WAIVED (ESD Safe)**| Formal waiver justified by Caravel ESD pads |
+| **SoC Integration** | Caravel Wishbone Wrapper | Complete | **READY** | [`src/picorv32_caravel_wrapper.v`](src/picorv32_caravel_wrapper.v) |
+
+---
+
 ## 📁 Repository Structure
 
 ```
@@ -255,6 +303,7 @@ make sim-gls
 │   └── firmware.hex           # 32-bit word aligned precompiled hex image
 ├── src/
 │   ├── picorv32a.v            # RISC-V RV32I CPU core RTL source (Claire Wolf, ISC License)
+│   ├── picorv32_caravel_wrapper.v # Efabless Caravel SoC Wishbone integration wrapper
 │   └── constraints.sdc        # SDC timing constraints (clock period, uncertainty, IO delay)
 ├── tb/
 │   ├── picorv32_tb.v          # Self-checking functional testbench (supports RTL, GLS, $readmemh, VCD)
@@ -266,11 +315,13 @@ make sim-gls
 │   ├── picorv32.v             # Final powered gate-level netlist (GLS, 122k lines)
 │   ├── picorv32.spef          # RC parasitic extraction file (14.9 MB)
 │   ├── picorv32.sdc           # Signoff SDC constraints
+│   ├── picorv32.sdf           # Standard Delay Format timing delay view
 │   └── picorv32.spice         # Extracted SPICE netlist for LVS
 ├── reports/
 │   ├── metrics.csv            # Complete PPA data measurements table
 │   ├── sta_mcmm_summary.rpt   # Multi-Corner STA summary (PVT: ss, tt, ff and Fmax)
 │   ├── irdrop_summary.rpt     # OpenROAD power grid static IR-drop & bounce summary
+│   ├── antenna_waiver.rpt     # Formal Antenna rule waiver justification for MPW shuttle
 │   ├── manufacturability.rpt  # Signoff DRC / LVS / Antenna summary
 │   ├── drc.rpt                # Magic DRC 0-violation report
 │   ├── 37-picorv32.lef.lvs.log# Netgen LVS exact matching log
