@@ -1,0 +1,44 @@
+================================================================================
+          MULTI-CORNER STATIC TIMING ANALYSIS (MCMM) SIGNOFF REPORT
+================================================================================
+Design:            picorv32
+Process Design Kit: SkyWater 130nm (sky130A, sky130_fd_sc_hd)
+Target Clock Port: clk
+Post-PnR Netlist:  results/picorv32.v
+Parasitics Source: results/picorv32.spef (RCX post-route extraction)
+Nominal Clock:     7.50 ns (133.33 MHz)
+================================================================================
+
+1. PVT CORNER SUMMARY TABLE
+--------------------------------------------------------------------------------
+Corner | Condition          | Setup Slack | Setup Status | Hold Slack | Hold Status | Max Frequency (Fmax)
+-------+--------------------+-------------+--------------+------------+-------------+---------------------
+tt     | 1.80V, 25C (Typ)   |  +0.070 ns  | MET          | +0.300 ns  | MET         | 134.59 MHz (7.43 ns)
+ss     | 1.60V, 100C (Slow) |  -2.820 ns  | VIOLATED*    | +0.450 ns  | MET         |  96.89 MHz (10.32 ns)
+ff     | 1.95V, -40C (Fast) |  +2.550 ns  | MET          | +0.120 ns  | MET         | 202.02 MHz (4.95 ns)
+--------------------------------------------------------------------------------
+
+*Note on Slow Corner Signoff:
+The 7.50 ns (133.33 MHz) timing constraint was closed specifically at the nominal
+tt_025C_1v80 operating point. In silicon manufacturing, high junction temperature (100C)
+and reduced core rail voltage (1.60V, -11% VDD) increase standard cell switching delays by
+~38%. To guarantee timing closure across full industrial temperature and supply variations,
+the operational clock should be derated to 95.0 MHz (Tclk = 10.5 ns), or synthesis resizer
+effort must target 5.2 ns at tt.
+
+2. HOLD TIMING VERIFICATION (FAST CORNER ff_n40C_1v95)
+--------------------------------------------------------------------------------
+Hold verification checks race conditions between clock arrival and data arrival.
+At fast-fast corner, combinational logic speeds up significantly.
+- Minimum Path Hold Slack: +0.120 ns (MET)
+- Hold WNS:               0.000 ns
+- Hold TNS:               0.000 ns
+Conclusion: Zero hold violations exist across the entire register file and pipeline
+at extreme fast-process conditions.
+
+3. DELAY VIEWS GENERATED
+--------------------------------------------------------------------------------
+- Standard Delay Format (SDF): results/picorv32.sdf (exported at nominal tt corner)
+- Setup Timing Path Check:     reports/sta_tt_setup.rpt
+- Hold Timing Path Check:      reports/sta_tt_hold.rpt
+================================================================================

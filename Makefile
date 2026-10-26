@@ -7,7 +7,7 @@ SHELL       := /bin/bash
 PYTHON      ?= python3
 REPO_ROOT   := $(shell pwd)
 
-.PHONY: all help firmware sim-rtl sim-gls flow view-layout clean
+.PHONY: all help firmware sim-rtl sim-gls flow view-layout sta-mcmm irdrop sdf clean
 
 # Default Target
 all: help
@@ -21,6 +21,9 @@ help:
 	@echo "   make sim-rtl      - Run Behavioral RTL simulation"
 	@echo "   make sim-gls      - Run Post-PnR Gate-Level simulation (GLS)"
 	@echo "   make flow         - Execute complete OpenLane RTL-to-GDSII flow"
+	@echo "   make sta-mcmm     - Run Multi-Corner STA (PVT: ss, tt, ff)"
+	@echo "   make irdrop       - Run Power Grid Static IR-Drop Analysis"
+	@echo "   make sdf          - Export Standard Delay Format (results/picorv32.sdf)"
 	@echo "   make view-layout  - Render layout image (docs/images/layout.png)"
 	@echo "   make clean        - Clean simulation, waveform and build artifacts"
 	@echo "======================================================================"
@@ -36,6 +39,16 @@ sim-rtl: firmware
 sim-gls: firmware
 	@echo "[INFO] Launching Gate-Level Simulation (GLS)..."
 	./tb/run_sim.sh gls
+
+sta-mcmm:
+	@echo "[INFO] Running Multi-Corner Static Timing Analysis (OpenSTA)..."
+	./scripts/run_sta_mcmm.sh
+
+irdrop:
+	@echo "[INFO] Running Power Grid Static IR-Drop Analysis (OpenROAD)..."
+	./scripts/run_irdrop.sh
+
+sdf: sta-mcmm
 
 flow:
 	@echo "[INFO] Launching OpenLane physical implementation..."

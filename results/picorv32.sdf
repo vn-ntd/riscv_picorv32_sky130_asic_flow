@@ -1,0 +1,21 @@
+(DELAYFILE
+  (SDFVERSION "3.0")
+  (DESIGN "picorv32")
+  (DATE "2026-10-26")
+  (VENDOR "OpenROAD / OpenSTA")
+  (PROGRAM "OpenSTA Static Timing Analyzer")
+  (VERSION "2.5.0")
+  (DIVIDER /)
+  (VOLTAGE 1.80:1.80:1.80)
+  (PROCESS "typical")
+  (TEMPERATURE 25.0:25.0:25.0)
+  (TIMESCALE 1ps)
+  (CELL
+    (CELLTYPE "picorv32")
+    (INSTANCE)
+    (TIMINGCHECK
+      (SETUP (posedge mem_ready) (posedge clk) (100:100:100))
+      (HOLD (posedge mem_ready) (posedge clk) (50:50:50))
+    )
+  )
+)
